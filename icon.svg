@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#fdf9f0"/>
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="none" stroke="#b54834" stroke-width="6"/>
+  <!-- 书本 -->
+  <path d="M128 140 Q128 120 148 120 L256 120 L256 380 L148 380 Q128 380 128 360 Z" fill="#b54834" opacity="0.9"/>
+  <path d="M384 140 Q384 120 364 120 L256 120 L256 380 L364 380 Q384 380 384 360 Z" fill="#9c3d2d" opacity="0.9"/>
+  <line x1="256" y1="120" x2="256" y2="380" stroke="#fdf9f0" stroke-width="3"/>
+  <!-- 书页线条 -->
+  <line x1="160" y1="170" x2="230" y2="170" stroke="#fdf9f0" stroke-width="3" opacity="0.5"/>
+  <line x1="160" y1="200" x2="220" y2="200" stroke="#fdf9f0" stroke-width="3" opacity="0.5"/>
+  <line x1="160" y1="230" x2="235" y2="230" stroke="#fdf9f0" stroke-width="3" opacity="0.5"/>
+  <line x1="282" y1="170" x2="352" y2="170" stroke="#fdf9f0" stroke-width="3" opacity="0.5"/>
+  <line x1="282" y1="200" x2="342" y2="200" stroke="#fdf9f0" stroke-width="3" opacity="0.5"/>
+  <line x1="282" y1="230" x2="357" y2="230" stroke="#fdf9f0" stroke-width="3" opacity="0.5"/>
+  <!-- 上升图表线 -->
+  <polyline points="140,340 190,310 240,320 290,270 340,250 380,200" fill="none" stroke="#c9a55c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- 数据点 -->
+  <circle cx="140" cy="340" r="5" fill="#c9a55c"/>
+  <circle cx="190" cy="310" r="5" fill="#c9a55c"/>
+  <circle cx="240" cy="320" r="5" fill="#c9a55c"/>
+  <circle cx="290" cy="270" r="5" fill="#c9a55c"/>
+  <circle cx="340" cy="250" r="5" fill="#c9a55c"/>
+  <circle cx="380" cy="200" r="5" fill="#c9a55c"/>
+</svg>

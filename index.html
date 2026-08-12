@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>价值投资分析器 · 基于《股市真规则》五步法</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#b54834">
+    <meta name="description" content="基于帕特·多尔西《股市真规则》五步分析法的价值投资工具，支持A股与港股">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="价值投资">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- 顶部导航 + 大成书房页首 -->
+        <header class="app-header">
+            <div class="masthead-top-line"></div>
+            <div class="masthead-bar">
+                <div class="masthead-left">
+                    <div class="masthead-title-group">
+                        <div class="masthead-title">价值投资分析器</div>
+                        <div class="masthead-subtitle">基于《股市真规则》帕特·多尔西五步分析法</div>
+                    </div>
+                </div>
+                <div class="masthead-edition">大成书房出品</div>
+                <div class="header-right">
+                    <div id="authArea" class="auth-area"></div>
+                    <button class="btn btn-ghost" onclick="loadDemoData()">填充示例</button>
+                    <button class="btn btn-ghost" onclick="resetAll()">重置</button>
+                    <div class="export-dropdown">
+                        <button class="btn btn-ghost" onclick="toggleExportMenu()">导出报告 ▾</button>
+                        <div class="export-menu" id="exportMenu">
+                            <button class="export-menu-item" onclick="exportReport(); toggleExportMenu()">导出 HTML</button>
+                            <button class="export-menu-item" onclick="exportPDF(); toggleExportMenu()">导出 PDF</button>
+                            <button class="export-menu-item" onclick="window.print(); toggleExportMenu()">打印</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="masthead-bottom-line"></div>
+        </header>
+
+        <div class="main-layout">
+            <!-- 左侧侧边栏 -->
+            <aside class="sidebar">
+                <!-- 数据获取 -->
+                <div class="fetch-card">
+                    <span class="fetch-label">📥 数据获取（请输入股票代码）</span>
+                    <div class="fetch-row">
+                        <input type="text" id="fetchCode" placeholder="代码或名称（A股6位/港股5位）" autocomplete="off">
+                        <button class="btn-fetch" id="fetchBtn" onclick="fetchStockData()">获取</button>
+                    </div>
+                    <div class="search-results" id="searchResults"></div>
+                    <div class="fetch-status" id="fetchStatus"></div>
+                </div>
+
+                <!-- 股票信息 -->
+                <div class="stock-info-card">
+                    <div class="input-group">
+                        <label>股票名称</label>
+                        <input type="text" id="stockName" placeholder="如：贵州茅台" value="">
+                    </div>
+                    <div class="input-group">
+                        <label>股票代码</label>
+                        <input type="text" id="stockCode" placeholder="如：600519" value="">
+                    </div>
+                    <div class="input-group">
+                        <label>所属行业</label>
+                        <select id="stockIndustry">
+                            <option value="">请选择</option>
+                            <option value="制造业">制造业</option>
+                            <option value="消费品">消费品</option>
+                            <option value="科技/软件">科技/软件</option>
+                            <option value="医药">医药</option>
+                            <option value="金融">金融</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>当前股价</label>
+                        <input type="number" id="currentPrice" placeholder="如：1680" step="0.01" value="">
+                    </div>
+                </div>
+
+                <!-- 步骤导航 -->
+                <nav class="step-nav">
+                    <div class="step-item active" data-step="1" onclick="goToStep(1)">
+                        <span class="step-num">1</span>
+                        <span class="step-title">十分钟初筛</span>
+                        <span class="step-status" id="status-1"></span>
+                    </div>
+                    <div class="step-item" data-step="2" onclick="goToStep(2)">
+                        <span class="step-num">2</span>
+                        <span class="step-title">护城河判断</span>
+                        <span class="step-status" id="status-2"></span>
+                    </div>
+                    <div class="step-item" data-step="3" onclick="goToStep(3)">
+                        <span class="step-num">3</span>
+                        <span class="step-title">财务三表透视</span>
+                        <span class="step-status" id="status-3"></span>
+                    </div>
+                    <div class="step-item" data-step="4" onclick="goToStep(4)">
+                        <span class="step-num">4</span>
+                        <span class="step-title">管理层评估</span>
+                        <span class="step-status" id="status-4"></span>
+                    </div>
+                    <div class="step-item" data-step="5" onclick="goToStep(5)">
+                        <span class="step-num">5</span>
+                        <span class="step-title">估值与安全边际</span>
+                        <span class="step-status" id="status-5"></span>
+                    </div>
+                    <div class="step-item report-item" data-step="6" onclick="goToStep(6)">
+                        <span class="step-num">★</span>
+                        <span class="step-title">综合报告</span>
+                        <span class="step-status" id="status-6"></span>
+                    </div>
+                </nav>
+
+                <!-- 总进度 -->
+                <div class="overall-progress">
+                    <div class="progress-label">
+                        <span>总进度</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- 自选股 -->
+                <div class="watchlist-panel">
+                    <div class="watchlist-header">
+                        <span class="watchlist-title">⭐ 自选股</span>
+                        <button class="btn-save-watch" onclick="saveToWatchlist()">保存当前</button>
+                    </div>
+                    <div class="watchlist-sort-bar">
+                        <button class="btn-wl-tool" id="refreshPriceBtn" onclick="refreshWatchlistData()">🔄</button>
+                        <span class="sort-label">排序：</span>
+                        <button class="btn-wl-tool btn-wl-sort" data-sort="margin" data-label="安全边际" onclick="sortWatchlist('margin')">↓安全边际</button>
+                        <button class="btn-wl-tool btn-wl-sort" data-sort="score" data-label="评分" onclick="sortWatchlist('score')">评分</button>
+                    </div>
+                    <div class="watchlist-items" id="watchlistItems">
+                        <p class="watchlist-empty">暂无自选股，分析完成后点击"保存当前"</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 右侧主内容区 -->
+            <main class="content-area">
+                <!-- ============ 第一步：十分钟初筛 ============ -->
+                <section class="step-section active" id="step-1">
+                    <div class="section-header">
+                        <h2>第一步 · 十分钟初筛</h2>
+                        <p class="section-intro">面对数千家公司，先用8项硬指标快速过滤。<strong>任意一项不通过即放弃</strong>，不浪费一分钟深度研究。</p>
+                    </div>
+
+                    <div class="checklist" id="screenChecklist">
+                        <!-- 动态生成 -->
+                    </div>
+
+                    <div class="step-result" id="step1Result">
+                        <div class="result-summary">
+                            <div class="result-badge" id="step1Badge">待评估</div>
+                            <div class="result-text" id="step1Text">请完成以上8项检查</div>
+                        </div>
+                    </div>
+
+                    <div class="step-actions">
+                        <button class="btn btn-primary" onclick="goToStep(2)">下一步：护城河判断 →</button>
+                    </div>
+                </section>
+
+                <!-- ============ 第二步：护城河判断 ============ -->
+                <section class="step-section" id="step-2">
+                    <div class="section-header">
+                        <h2>第二步 · 护城河判断</h2>
+                        <p class="section-intro">公司能否长期保持高于平均水平的利润，取决于它能否阻挡竞争者。识别<strong>至少一个可持续的护城河来源</strong>。</p>
+                    </div>
+
+                    <!-- 自动识别区 -->
+                    <div class="auto-analysis-bar">
+                        <button class="btn btn-auto" id="autoMoatBtn" onclick="autoAnalyzeMoat()">🔍 自动识别护城河</button>
+                        <div class="auto-analysis-result" id="moatAutoResult"></div>
+                    </div>
+
+                    <div class="moat-grid" id="moatGrid">
+                        <!-- 动态生成5大护城河 -->
+                    </div>
+
+                    <div class="moat-validation">
+                        <h3>财务指标验证</h3>
+                        <div class="validation-grid">
+                            <div class="validation-item">
+                                <label>ROE（近5年平均）</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="avgROE" step="0.1" placeholder="如：18.5">
+                                    <span class="unit">%</span>
+                                </div>
+                                <span class="validation-hint">标准：＞15%</span>
+                            </div>
+                            <div class="validation-item">
+                                <label>毛利率（近5年平均）</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="avgGrossMargin" step="0.1" placeholder="如：50.2">
+                                    <span class="unit">%</span>
+                                </div>
+                                <span class="validation-hint">标准：稳定或上行</span>
+                            </div>
+                            <div class="validation-item">
+                                <label>自由现金流/销售收入</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="fcfRatio" step="0.1" placeholder="如：8.5">
+                                    <span class="unit">%</span>
+                                </div>
+                                <span class="validation-hint">标准：＞5%</span>
+                            </div>
+                            <div class="validation-item">
+                                <label>毛利率是否稳定/上行</label>
+                                <select id="marginTrend">
+                                    <option value="">请选择</option>
+                                    <option value="stable">稳定或上行</option>
+                                    <option value="declining">持续下降</option>
+                                </select>
+                                <span class="validation-hint">趋势判断</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-result">
+                        <div class="result-summary">
+                            <div class="result-badge" id="step2Badge">待评估</div>
+                            <div class="result-text" id="step2Text">请识别护城河并验证财务指标</div>
+                        </div>
+                    </div>
+
+                    <div class="step-actions">
+                        <button class="btn btn-ghost" onclick="goToStep(1)">← 上一步</button>
+                        <button class="btn btn-primary" onclick="goToStep(3)">下一步：财务三表透视 →</button>
+                    </div>
+                </section>
+
+                <!-- ============ 第三步：财务三表透视 ============ -->
+                <section class="step-section" id="step-3">
+                    <div class="section-header">
+                        <h2>第三步 · 财务三表透视</h2>
+                        <p class="section-intro">资产负债表是<strong>骨架</strong>，利润表是<strong>长势</strong>，现金流量表是<strong>血脉</strong>。看三表之间的协调性，捕捉危险信号。</p>
+                    </div>
+
+                    <!-- 资产负债表 -->
+                    <div class="statement-card">
+                        <div class="statement-header">
+                            <h3>📊 资产负债表（骨架）</h3>
+                            <span class="statement-meta dyn-cur-unit">单位：亿元</span>
+                        </div>
+                        <div class="statement-grid">
+                            <div class="input-group">
+                                <label>总资产</label>
+                                <input type="number" id="totalAssets" step="0.01" placeholder="如：1500">
+                            </div>
+                            <div class="input-group">
+                                <label>总负债</label>
+                                <input type="number" id="totalLiabilities" step="0.01" placeholder="如：600">
+                            </div>
+                            <div class="input-group">
+                                <label>有息负债</label>
+                                <input type="number" id="interestDebt" step="0.01" placeholder="如：100">
+                            </div>
+                            <div class="input-group">
+                                <label>净资产</label>
+                                <input type="number" id="netAssets" step="0.01" placeholder="如：900">
+                            </div>
+                            <div class="input-group">
+                                <label>货币资金</label>
+                                <input type="number" id="cash" step="0.01" placeholder="如：300">
+                            </div>
+                            <div class="input-group">
+                                <label>商誉</label>
+                                <input type="number" id="goodwill" step="0.01" placeholder="如：50">
+                            </div>
+                            <div class="input-group">
+                                <label>应收账款</label>
+                                <input type="number" id="accountsReceivable" step="0.01" placeholder="如：80">
+                            </div>
+                            <div class="input-group">
+                                <label>存货</label>
+                                <input type="number" id="inventory" step="0.01" placeholder="如：200">
+                            </div>
+                            <div class="input-group">
+                                <label>流动资产</label>
+                                <input type="number" id="currentAssets" step="0.01" placeholder="如：500">
+                            </div>
+                            <div class="input-group">
+                                <label>流动负债</label>
+                                <input type="number" id="currentLiabilities" step="0.01" placeholder="如：300">
+                            </div>
+                            <div class="input-group">
+                                <label>合同负债</label>
+                                <input type="number" id="contractLiabilities" step="0.01" placeholder="如：50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 利润表 -->
+                    <div class="statement-card">
+                        <div class="statement-header">
+                            <h3>📈 利润表（长势）</h3>
+                            <span class="statement-meta dyn-cur-unit">单位：亿元</span>
+                        </div>
+                        <div class="statement-grid">
+                            <div class="input-group">
+                                <label>营业收入</label>
+                                <input type="number" id="revenue" step="0.01" placeholder="如：500">
+                            </div>
+                            <div class="input-group">
+                                <label>营业利润</label>
+                                <input type="number" id="operatingProfit" step="0.01" placeholder="如：200">
+                            </div>
+                            <div class="input-group">
+                                <label>净利润</label>
+                                <input type="number" id="netProfit" step="0.01" placeholder="如：180">
+                            </div>
+                            <div class="input-group">
+                                <label>扣非净利润</label>
+                                <input type="number" id="nonRecurringProfit" step="0.01" placeholder="如：170">
+                            </div>
+                            <div class="input-group">
+                                <label>毛利率（%）</label>
+                                <input type="number" id="grossMargin" step="0.1" placeholder="如：50">
+                            </div>
+                            <div class="input-group">
+                                <label>销售费用率（%）</label>
+                                <input type="number" id="salesExpenseRatio" step="0.1" placeholder="如：12">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 现金流量表 -->
+                    <div class="statement-card">
+                        <div class="statement-header">
+                            <h3>💵 现金流量表（血脉）</h3>
+                            <span class="statement-meta dyn-cur-unit">单位：亿元</span>
+                        </div>
+                        <div class="statement-grid">
+                            <div class="input-group">
+                                <label>经营现金流</label>
+                                <input type="number" id="operatingCF" step="0.01" placeholder="如：190">
+                            </div>
+                            <div class="input-group">
+                                <label>资本支出</label>
+                                <input type="number" id="capex" step="0.01" placeholder="如：30">
+                            </div>
+                            <div class="input-group">
+                                <label>自由现金流（自动）</label>
+                                <input type="text" id="freeCF" readonly placeholder="自动计算">
+                            </div>
+                            <div class="input-group">
+                                <label>FCF/收入（自动）</label>
+                                <input type="text" id="fcfRevenueRatio" readonly placeholder="自动计算">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 自动健康检测 -->
+                    <div class="health-check" id="healthCheck">
+                        <h3>🔍 自动健康检测</h3>
+                        <div class="health-items" id="healthItems">
+                            <p class="placeholder-text">填写财务数据后自动检测</p>
+                        </div>
+                    </div>
+
+                    <!-- 健康度雷达图 -->
+                    <div class="chart-card" id="healthChartCard" style="display:none;">
+                        <h3>🎯 财务健康雷达</h3>
+                        <div class="chart-container">
+                            <canvas id="healthRadarChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="step-result">
+                        <div class="result-summary">
+                            <div class="result-badge" id="step3Badge">待评估</div>
+                            <div class="result-text" id="step3Text">请填写三表数据</div>
+                        </div>
+                    </div>
+
+                    <div class="step-actions">
+                        <button class="btn btn-ghost" onclick="goToStep(2)">← 上一步</button>
+                        <button class="btn btn-primary" onclick="goToStep(4)">下一步：管理层评估 →</button>
+                    </div>
+                </section>
+
+                <!-- ============ 第四步：管理层评估 ============ -->
+                <section class="step-section" id="step-4">
+                    <div class="section-header">
+                        <h2>第四步 · 管理层评估</h2>
+                        <p class="section-intro">再好的生意，交给不合适的人也会毁掉。从<strong>报酬、性格、运作</strong>三个维度评估管理层。</p>
+                    </div>
+
+                    <!-- 自动评估区 -->
+                    <div class="auto-analysis-bar">
+                        <button class="btn btn-auto" id="autoMgmtBtn" onclick="autoAnalyzeManagement()">🔍 自动评估管理层</button>
+                        <div class="auto-analysis-result" id="mgmtAutoResult"></div>
+                    </div>
+
+                    <div class="management-grid" id="managementGrid">
+                        <!-- 动态生成 -->
+                    </div>
+
+                    <div class="step-result">
+                        <div class="result-summary">
+                            <div class="result-badge" id="step4Badge">待评估</div>
+                            <div class="result-text" id="step4Text">请评估三个维度</div>
+                        </div>
+                    </div>
+
+                    <div class="step-actions">
+                        <button class="btn btn-ghost" onclick="goToStep(3)">← 上一步</button>
+                        <button class="btn btn-primary" onclick="goToStep(5)">下一步：估值与安全边际 →</button>
+                    </div>
+                </section>
+
+                <!-- ============ 第五步：估值与安全边际 ============ -->
+                <section class="step-section" id="step-5">
+                    <div class="section-header">
+                        <h2>第五步 · 估值与安全边际</h2>
+                        <p class="section-intro">再好的公司，买入价格过高也是糟糕的投资。通过<strong>相对估值</strong>和<strong>绝对估值</strong>交叉验证，设定安全边际买入价。</p>
+                    </div>
+
+                    <div class="valuation-layout">
+                        <!-- 相对估值 -->
+                        <div class="valuation-card">
+                            <h3>相对估值</h3>
+                            <div class="valuation-grid">
+                                <div class="input-group">
+                                    <label>当前PE（市盈率）</label>
+                                    <input type="number" id="currentPE" step="0.1" placeholder="如：25.5">
+                                </div>
+                                <div class="input-group">
+                                    <label>历史PE中枢</label>
+                                    <input type="number" id="historicalPE" step="0.1" placeholder="如：30">
+                                </div>
+                                <div class="input-group">
+                                    <label>行业平均PE</label>
+                                    <input type="number" id="industryPE" step="0.1" placeholder="如：22">
+                                </div>
+                                <div class="input-group">
+                                    <label>当前PB（市净率）</label>
+                                    <input type="number" id="currentPB" step="0.1" placeholder="如：8.5">
+                                </div>
+                                <div class="input-group">
+                                    <label>历史PB中枢</label>
+                                    <input type="number" id="historicalPB" step="0.1" placeholder="如：10">
+                                </div>
+                                <div class="input-group">
+                                    <label>行业平均PB</label>
+                                    <input type="number" id="industryPB" step="0.1" placeholder="如：6">
+                                </div>
+                            </div>
+                            <div class="valuation-verdict" id="relativeVerdict">填写数据后自动判断</div>
+                            <div class="valuation-verdict" id="pbVerdict" style="margin-top:6px;">填写PB数据后自动判断</div>
+                        </div>
+
+                        <!-- 绝对估值 DCF -->
+                        <div class="valuation-card">
+                            <h3>绝对估值（DCF简化版）</h3>
+                            <div class="valuation-grid">
+                                <div class="input-group">
+                                    <label class="dyn-cur-unit">自由现金流（亿元）</label>
+                                    <input type="number" id="dcfFCF" step="0.01" placeholder="如：160">
+                                </div>
+                                <div class="input-group">
+                                    <label>预期增长率（%）</label>
+                                    <input type="number" id="growthRate" step="0.1" placeholder="如：12" value="10">
+                                </div>
+                                <div class="input-group">
+                                    <label>折现率（%）</label>
+                                    <select id="discountRate">
+                                        <option value="9">9% — 高护城河稳定公司</option>
+                                        <option value="10.5" selected>10.5% — 一般公司</option>
+                                        <option value="13">13% — 高风险公司</option>
+                                        <option value="15">15% — 极高风险</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>永续增长率（%）</label>
+                                    <input type="number" id="terminalGrowth" step="0.1" placeholder="如：3" value="3">
+                                </div>
+                            </div>
+                            <div class="dcf-result" id="dcfResult">
+                                <div class="dcf-row">
+                                    <span>内在价值估算</span>
+                                    <strong id="intrinsicValue">—</strong>
+                                </div>
+                                <div class="dcf-row">
+                                    <span>每股内在价值</span>
+                                    <strong id="perShareValue">—</strong>
+                                </div>
+                                <div class="dcf-row">
+                                    <span>总股本（亿股）</span>
+                                    <input type="number" id="totalShares" step="0.01" placeholder="如：12.56" style="width: 100px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 安全边际 -->
+                        <div class="valuation-card safety-card">
+                            <h3>安全边际</h3>
+                            <div class="safety-margin-selector">
+                                <label>安全边际等级</label>
+                                <select id="safetyMargin">
+                                    <option value="0.2">20% — 高护城河稳定公司</option>
+                                    <option value="0.3" selected>30% — 一般公司</option>
+                                    <option value="0.4">40% — 无护城河或高风险</option>
+                                </select>
+                            </div>
+                            <div class="buy-price-display">
+                                <div class="buy-price-label">建议买入价</div>
+                                <div class="buy-price-value" id="buyPrice">—</div>
+                                <div class="buy-price-detail" id="buyPriceDetail">完成估值后计算</div>
+                            </div>
+                            <div class="price-comparison" id="priceComparison">
+                                <!-- 当前价格 vs 买入价对比 -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 估值对比表格 -->
+                    <div class="valuation-compare-card" id="valuationCompareCard" style="display:none;">
+                        <h3>📊 估值对比</h3>
+                        <table class="valuation-compare-table">
+                            <thead>
+                                <tr>
+                                    <th>项目</th>
+                                    <th class="dyn-cur-pershare">价格（元/股）</th>
+                                    <th>判断</th>
+                                </tr>
+                            </thead>
+                            <tbody id="valuationCompareBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="step-result">
+                        <div class="result-summary">
+                            <div class="result-badge" id="step5Badge">待评估</div>
+                            <div class="result-text" id="step5Text">请完成估值参数</div>
+                        </div>
+                    </div>
+
+                    <div class="step-actions">
+                        <button class="btn btn-ghost" onclick="goToStep(4)">← 上一步</button>
+                        <button class="btn btn-primary" onclick="goToStep(6)">查看综合报告 →</button>
+                    </div>
+                </section>
+
+                <!-- ============ 综合报告 ============ -->
+                <section class="step-section" id="step-6">
+                    <div class="section-header">
+                        <h2>综合分析报告</h2>
+                        <p class="section-intro">基于五步分析法的系统化结论。结论先行，证据支撑。</p>
+                    </div>
+
+                    <div class="report-container" id="reportContainer">
+                        <div class="report-placeholder">
+                            <div class="placeholder-icon">📋</div>
+                            <p>完成前五步分析后，此处生成综合报告</p>
+                            <button class="btn btn-primary" onclick="generateReport()">生成报告</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <!-- 大成书房页脚 -->
+        <footer class="app-footer">
+            <div class="footer-brand">大成书房</div>
+            <div class="footer-divider"></div>
+            <div class="footer-slogan">价值投资 · 独立思考 · 长期致胜</div>
+        </footer>
+    </div>
+
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="cloud-sync.js"></script>
+    <script src="app.js"></script>
+    <script>
+        // PWA Service Worker 注册
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('[PWA] Service Worker 已注册'))
+                    .catch(err => console.log('[PWA] Service Worker 注册失败:', err));
+            });
+        }
+
+        // PWA 安装提示
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallBanner();
+        });
+
+        function showInstallBanner() {
+            if (!deferredPrompt) return;
+            const banner = document.createElement('div');
+            banner.className = 'pwa-install-banner';
+            banner.innerHTML = `
+                <span>📱 安装到桌面，随时使用</span>
+                <button class="btn btn-primary btn-sm" onclick="triggerInstall()">安装</button>
+                <button class="btn btn-ghost btn-sm" onclick="this.parentElement.remove()">稍后</button>
+            `;
+            document.body.appendChild(banner);
+        }
+
+        async function triggerInstall() {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('[PWA] 安装结果:', outcome);
+            deferredPrompt = null;
+            document.querySelector('.pwa-install-banner')?.remove();
+        }
+    </script>
+</body>
+</html>

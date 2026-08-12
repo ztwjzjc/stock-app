@@ -1,0 +1,48 @@
+{
+    "name": "价值投资分析器 · 基于《股市真规则》五步法",
+    "short_name": "价值投资",
+    "description": "基于帕特·多尔西《股市真规则》五步分析法的价值投资工具，支持A股与港股",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "orientation": "any",
+    "theme_color": "#b54834",
+    "background_color": "#fdf9f0",
+    "lang": "zh-CN",
+    "dir": "ltr",
+    "categories": ["finance", "productivity", "business"],
+    "icons": [
+        {
+            "src": "icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "新分析",
+            "short_name": "分析",
+            "description": "输入股票代码开始新分析",
+            "url": "./?action=new"
+        },
+        {
+            "name": "自选股",
+            "short_name": "自选",
+            "description": "查看自选股列表",
+            "url": "./?action=watchlist"
+        }
+    ]
+}
